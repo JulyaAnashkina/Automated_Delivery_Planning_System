@@ -13,30 +13,45 @@ namespace Automated_Delivery_Planning_System
     public partial class Form1 : Form
     {
         public static CVRP.Client[][] mass_p_rout = null;
+        public static CVRP.Client[] v = null;
+        public static CVRP.Avto[] avto = null;
+
         public Form1()
         {
             InitializeComponent();
-            int n = 12;
-            int k = 6;
-            CVRP.Client[] v = new CVRP.Client[n + 1];
-            CVRP.Avto[] avto = new CVRP.Avto[k];
+            //int n = 12;
+            //int k = 6;
 
-            CVRP.Reading_File(v, avto);
+            string st_clients = "Clients.xml";
+            string st_cars = "Cars.xml";
 
-            double[][] c = new double[n + 1][]; //матрица расстояний между пунктами
-            for (int i = 0; i < n + 1; i++)
-                c[i] = new double[n + 1];
+            try
+            {
+                CVRP.ReadXML_Clients(st_clients);
+                CVRP.ReadXML_Cars(st_cars);
+            }
+            catch
+            { textBox1.Text = "ошибка открытия файла"; }
+
+            //CVRP.Client[] v = new CVRP.Client[n + 1];
+            //CVRP.Avto[] avto = new CVRP.Avto[k];
+
+            //CVRP.Reading_File(v, avto);
+
+            double[][] c = new double[v.Length][]; //матрица расстояний между пунктами
+            for (int i = 0; i < v.Length; i++)
+                c[i] = new double[v.Length];
 
             CVRP.Get_Of_Distance_Matrix(c);
 
-            double[][] s = new double[n + 1][]; //матрица километровых выйгрышей
-            for (int h1 = 0; h1 < n + 1; h1++)
-                s[h1] = new double[n + 1];
+            double[][] s = new double[v.Length][]; //матрица километровых выйгрышей
+            for (int h1 = 0; h1 < v.Length; h1++)
+                s[h1] = new double[v.Length];
 
             CVRP.Get_Of_Kilometer_Wage_Matrix(s, c);
 
             CVRP.Client[][] ready_made_routes = new CVRP.Client[0][];
-            CVRP.Client[] v_rest = new CVRP.Client[n + 1];
+            CVRP.Client[] v_rest = new CVRP.Client[v.Length];
             v_rest = v;
 
             int[] used_capacity = new int[avto.Length];
@@ -45,21 +60,21 @@ namespace Automated_Delivery_Planning_System
 
             avto = CVRP.BubbleSort_Avto(avto);
 
-            /**************************************************************/
-            /*          ПОВТОР 1 ПРИ ИЗМЕнЕнИИ Грузоподъёмности           */
-            /**************************************************************/
+            ///**************************************************************/
+            ///*          ПОВТОР 1 ПРИ ИЗМЕнЕнИИ Грузоподъёмности           */
+            ///**************************************************************/
             Search_for_routes_for_the_remaining_vertices: //Поиск маршрутов для оставшихся вершин
 
             CVRP.Client[][] routes = new CVRP.Client[v_rest.Length - 1][];
             for (int i = 0; i < v_rest.Length - 1; i++)
                 routes[i] = new CVRP.Client[] { v_rest[0], v_rest[i + 1], v_rest[0] };
 
-            int[][] s_max_matr = new int[n + 1][]; //дополнительная матрица, какие ячейки уже рассматривались = 1
-            for (int h1 = 0; h1 < n + 1; h1++)
-                s_max_matr[h1] = new int[n + 1];
+            int[][] s_max_matr = new int[v.Length][]; //дополнительная матрица, какие ячейки уже рассматривались = 1
+            for (int h1 = 0; h1 < v.Length; h1++)
+                s_max_matr[h1] = new int[v.Length];
 
-            for (int i = 0; i < n; i++)
-                for (int j = 0; j < n; j++)
+            for (int i = 0; i < v.Length - 1; i++) //почему до n=12 
+                for (int j = 0; j < v.Length - 1; j++)
                     if (i == j)
                         s_max_matr[i][j] = 1;
                     else
@@ -78,12 +93,12 @@ namespace Automated_Delivery_Planning_System
                     used_capacity[i] = 1;
             int f = 1;
 
-            /****************************************************************************/
-            /*          ПОВТОР 2 для поиска двух новых вершин для объединения           */
-            /****************************************************************************/
+            ///****************************************************************************/
+            ///*          ПОВТОР 2 для поиска двух новых вершин для объединения           */
+            ///****************************************************************************/
             Search_for_two_routes_to_merge: //Поиск двух маршрутов для объединения
 
-            CVRP.Client[][] built_routes = new CVRP.Client[n][]; //готовые маршруты            
+            CVRP.Client[][] built_routes = new CVRP.Client[v.Length - 1][]; //готовые маршруты            
             for (int i = 0; i < routes.Length; i++)
             {
                 built_routes[i] = new CVRP.Client[routes.Length];
@@ -141,7 +156,7 @@ namespace Automated_Delivery_Planning_System
                 goto Search_for_two_routes_to_merge; //поиск двух маршрутов для объединения
             }
 
-            //оптимизация внутри каждого маршрута
+            ////оптимизация внутри каждого маршрута
             for (int i = 0; i < ready_made_routes.Length; i++)
             {
                 CVRP.Client[] m_rout = new CVRP.Client[ready_made_routes[i].Length - 2];
@@ -176,8 +191,8 @@ namespace Automated_Delivery_Planning_System
                 }
                 textBox1.Text += Environment.NewLine + "Общий объём груза = " + all_q.ToString();
             }
-            Console.ReadLine();
-            /*Console.WriteLine("Все маршруты построены");
+            /*Console.ReadLine();
+            Console.WriteLine("Все маршруты построены");
             for (int i = 0; i < ready_made_routes.Length; i++)
             {
                 Console.WriteLine("\n ---------------МАРШРУТ {0}---------------", p1);

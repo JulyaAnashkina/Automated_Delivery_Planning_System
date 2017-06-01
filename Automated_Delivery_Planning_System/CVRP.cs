@@ -5,13 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Schema;
 
 namespace Automated_Delivery_Planning_System
 {
     public static class CVRP
     {
-        public const int n = 12;
-        public const int k = 5;
+        //public const int n = 12;
+        //public const int k = 5;
 
         public struct Client
         {
@@ -28,7 +30,7 @@ namespace Automated_Delivery_Planning_System
 
             public void Show_Client()
             {
-                Form1.textBox1.Text += Environment.NewLine + number.ToString()+" Адрес: "+address.ToString()+" Количество груза: "+q.ToString();
+                Form1.textBox1.Text += Environment.NewLine + number.ToString() + " Адрес: " + address.ToString() + " Количество груза: " + q.ToString();
                 //Console.WriteLine("\n{0} Адрес: {1} Количество груза: {2} ", number, address, q);
             }
         }
@@ -60,11 +62,94 @@ namespace Automated_Delivery_Planning_System
 
             public void Show_Avto()
             {
-                Console.WriteLine("\nГос. номер: {0} \nГрузоподъёмность: {1} ", number, b);
+                Form1.textBox1.Text += Environment.NewLine + "Гос. номер:" + number.ToString() + " Грузоподъёмность: " + b.ToString();
+               // Console.WriteLine("\nГос. номер: {0} \nГрузоподъёмность: {1} ", number, b);
+            }
+        }
+        public static void SettingsValidationEventHandler(object sender, ValidationEventArgs e)
+        {
+            if (e.Severity == XmlSeverityType.Warning)
+                MessageBox.Show("Внимание: " + e.Message);
+            else if (e.Severity == XmlSeverityType.Error)
+                MessageBox.Show("Ошибка записи: " + e.Message);
+        }
+
+        public static void ReadXML_Clients(string file1)
+        {
+            XmlReaderSettings clientSettings = new XmlReaderSettings();
+            clientSettings.Schemas.Add(null, "Clients.xsd");
+            clientSettings.ValidationType = ValidationType.Schema;
+            XmlReader xReader = XmlReader.Create(file1, clientSettings);
+            XmlDocument document = new XmlDocument();
+            try
+            {
+                ValidationEventHandler eventHandler = new
+                    ValidationEventHandler(SettingsValidationEventHandler);
+                document.Load(xReader);
+                document.Validate(eventHandler);
+                xReader.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка: " + ex.Message);
+                xReader.Close();
+                return;
+            }
+
+            string[] contr1 = new string[3];
+            
+            XmlNodeList xClient = document.DocumentElement.ChildNodes;
+            Form1.v = new Client[xClient.Count];
+            int i = 0;
+
+            foreach (XmlNode xCl in xClient)
+            {
+                contr1[0] = Convert.ToString(xCl.SelectSingleNode("Number").InnerText);
+                contr1[1] = Convert.ToString(xCl.SelectSingleNode("Address").InnerText);
+                contr1[2] = Convert.ToString(xCl.SelectSingleNode("Cargo").InnerText);
+                Form1.v[i] = new Client(contr1);
+                i++;
             }
         }
 
-        public static void Reading_File(Client[] v, Avto[] avto)
+        public static void ReadXML_Cars(string file1)
+        {
+            XmlReaderSettings carSettings = new XmlReaderSettings();
+            carSettings.Schemas.Add(null, "Cars.xsd");
+            carSettings.ValidationType = ValidationType.Schema;
+            XmlReader xReader = XmlReader.Create(file1, carSettings);
+            XmlDocument document = new XmlDocument();
+            try
+            {
+                ValidationEventHandler eventHandler = new
+                    ValidationEventHandler(SettingsValidationEventHandler);
+                document.Load(xReader);
+                document.Validate(eventHandler);
+                xReader.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка: " + ex.Message);
+                xReader.Close();
+                return;
+            }
+
+            string[] contr1 = new string[2];
+
+            XmlNodeList xCar = document.DocumentElement.ChildNodes;
+            Form1.avto = new Avto[xCar.Count];
+            int i = 0;
+
+            foreach (XmlNode xCl in xCar)
+            {
+                contr1[0] = Convert.ToString(xCl.SelectSingleNode("Number").InnerText);
+                contr1[1] = Convert.ToString(xCl.SelectSingleNode("Carrying").InnerText);
+                Form1.avto[i] = new Avto(contr1);
+                i++;
+            }
+        }
+
+        /*public static void Reading_File(Client[] v, Avto[] avto)
         {
             try
             {   // откройте текстовый файл с помощью программы чтения потока.
@@ -97,7 +182,7 @@ namespace Automated_Delivery_Planning_System
                 Console.WriteLine(e.Message);
                 Console.ReadLine();
             }
-        }
+        }*/
 
         public static void Get_Of_Distance_Matrix(double[][] c) //изменить заполнение
         {
@@ -128,7 +213,7 @@ namespace Automated_Delivery_Planning_System
             c[10][11] = 13.9; c[10][12] = 7.2;
             c[11][12] = 11.4;
 
-            for (int i = 0; i < n + 1; i++)
+            for (int i = 0; i < Form1.v.Length; i++)
             {
                 int j = 0;
                 while (j < i + 1)
@@ -141,13 +226,13 @@ namespace Automated_Delivery_Planning_System
 
         public static void Get_Of_Kilometer_Wage_Matrix(double[][] s, double[][] c)
         {
-            for (int i = 0; i < n + 1; i++)
-                for (int j = 0; j < n + 1; j++)
+            for (int i = 0; i < Form1.v.Length; i++)
+                for (int j = 0; j < Form1.v.Length; j++)
                     if (i != j)
                         s[i][j] = c[0][i] + c[0][j] - c[i][j];
                     else s[i][j] = 0;
 
-            for (int i = 0; i < n + 1; i++)
+            for (int i = 0; i < Form1.v.Length; i++)
             {
                 int j = 0;
                 while (j < i + 1)
@@ -170,8 +255,8 @@ namespace Automated_Delivery_Planning_System
                 number_v[i] = v[i].number;
             bool condition_i = false, condition_j = false;
 
-            for (int i = 0; i < n + 1; i++)
-                for (int j = 0; j < n + 1; j++)
+            for (int i = 0; i < Form1.v.Length; i++)
+                for (int j = 0; j < Form1.v.Length; j++)
                 {
                     int k = 0;
                     while (k < v.Length)
